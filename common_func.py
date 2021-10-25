@@ -33,14 +33,14 @@ def savePickle(obj, path):
 
 
 def dictEvent(name, run):
-	t = np.genfromtxt('/home/2311453s/Astronomy 345HM/BH-Isotropy/data/times/%s.txt'%(name))
+	t = np.genfromtxt('/content/data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
-		'postSamplePath' :  '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
-		'pofdPath':     '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Events/Pofd_%s.p' %(run, name),
-		'pofdMargPath' : '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
-		'psdPath':      '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
+		'postSamplePath' :  '/content/data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
+		'pofdPath':     '/content/data/Run_%s/Events/Pofd_%s.p' %(run, name),
+		'pofdMargPath' : '/content/data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
+		'psdPath':      '/content/data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
                 'time': t
 		}
 	return d
@@ -49,11 +49,11 @@ def dictEvent(name, run):
 def dictRun(run, psdFile, obsTfile, desc):
     d = {
         'run' :         run,
-        'psdPath':      '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/PSD_data/%s' %(psdFile),
-        'obsTpath':     '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/PSD_data/%s' %(obsTfile),
-        'pofdPath':     '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Events/Pofd_%s.p' %(run, desc),
-        'pofdMargPath': '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
-        'pofdAvPath' :  '/home/2311453s/Astronomy 345HM/BH-Isotropy/data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
+        'psdPath':      '/content/data/PSD_data/%s' %(psdFile),
+        'obsTpath':     '/content/data/PSD_data/%s' %(obsTfile),
+        'pofdPath':     '/content/data/Run_%s/Events/Pofd_%s.p' %(run, desc),
+        'pofdMargPath': '/content/data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
+        'pofdAvPath' :  '/content/data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
         }
     return d
 

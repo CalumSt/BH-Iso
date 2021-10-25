@@ -65,29 +65,29 @@ eventsList = [cf.dictEvent('GW150914', 'O1'),
 
 eventsListGW170814 = [cf.dictEvent('GW170814', 'O2')]*10
 
-samplesPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/Samples_%s.p'
-probPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/Prob_chain.p'
-acceptancePath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/AcceptFrac_%s.p'
-covarPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/Covariance_%s.p'
-meanMapPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/Mean_map_%s_%s'
-stdMapPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/STD_map_%s_%s'
-maxProbPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/Max_prop_%s_%s'
-probPlotPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/Probability_graph.png'
-rateHistPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/R_hist_%s_%s'
-pixelHistPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Plots/Hist_%s'
-PSDpath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/PSD_%s'
+samplesPath = '/content/Results/Sampling/Data/Samples_%s.p'
+probPath = '/content/Results/Sampling/Data/Prob_chain.p'
+acceptancePath = '/content/Results/Sampling/Data/AcceptFrac_%s.p'
+covarPath = '/content/Results/Sampling/Data/Covariance_%s.p'
+meanMapPath = '/content/Results/Sampling/Plots/Mean_map_%s_%s'
+stdMapPath = '/content/Results/Sampling/Plots/STD_map_%s_%s'
+maxProbPath = '/content/Results/Sampling/Plots/Max_prop_%s_%s'
+probPlotPath = '/content/Results/Sampling/Plots/Probability_graph.png'
+rateHistPath = '/content/Results/Sampling/Plots/R_hist_%s_%s'
+pixelHistPath = '/content/Results/Sampling/Plots/Hist_%s'
+PSDpath = '/content/Results/Pofd/PSD_%s'
 
 
-samplesLastPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/Samples_last.p'
-lastStepPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Sampling/Data/Last_step.p'
+samplesLastPath = '/content/Results/Sampling/Data/Samples_last.p'
+lastStepPath = '/content/Results/Sampling/Data/Last_step.p'
 
-mapPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Pofd_mean_%s'
-sphMap = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Sph_map_%s'
-rsphMap = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Real_sph_map_%s'
+mapPath = '/content/Results/Pofd/Pofd_mean_%s'
+sphMap = '/content/Results/Pofd/Sph_map_%s'
+rsphMap = '/content/Results/Pofd/Real_sph_map_%s'
 
-survivalPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Survival_%s.pdf'
-objSamplesPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Samples_distribution'
+survivalPath = '/content/Results/Pofd/Survival_%s.pdf'
+objSamplesPath = '/content/Results/Pofd/Samples_distribution'
 
-distPath = '/home/2311453s/Astronomy 345HM/BH-Isotropy/Results/Pofd/Pofd_mollview_%s_%sMpc'
+distPath = '/content/Results/Pofd/Pofd_mollview_%s_%sMpc'
 
 
