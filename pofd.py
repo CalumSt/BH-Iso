@@ -193,11 +193,11 @@ class Pofd(object):
                 survival = scipy.stats.ncx2.sf(p.snrThrComb**2, 4, survival)
                 return np.sum(survival,0)/p.nSamp
 
-        loopOut = pool.map(loopKiller, range(self.__nPix))
-        pofd_dLRADec = np.vstack(loopOut)
-        cf.savePickle(pofd_dLRADec, item['pofdPath'])
-        print('Actual end:', datetime.datetime.time(datetime.datetime.now()))
-        print(pofd_dLRADec.shape)
+            loopOut = pool.map(loopKiller, range(self.__nPix))
+            pofd_dLRADec = np.vstack(loopOut)
+            cf.savePickle(pofd_dLRADec, item['pofdPath'])
+            print('Actual end:', datetime.datetime.time(datetime.datetime.now()))
+            print(pofd_dLRADec.shape)
         pool.close()
         pool.join()
         pool.clear()
