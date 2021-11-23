@@ -39,10 +39,10 @@ def dictEvent(name, run):
 	d = {
 		'name' :            name,
 		'run' :             run,
-		'postSamplePath' :  GenPath + 'data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
-		'pofdPath':     GenPath + 'data/Run_%s/Events/Pofd_%s.p' %(run, name),
-		'pofdMargPath' : GenPath + 'data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
-		'psdPath':      GenPath + 'data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
+		'postSamplePath' :  GenPath + 'Data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
+		'pofdPath':     GenPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
+		'pofdMargPath' : GenPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
+		'psdPath':      GenPath + 'Data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
                 'time': t
 		}
 	return d
@@ -51,11 +51,11 @@ def dictEvent(name, run):
 def dictRun(run, psdFile, obsTfile, desc):
     d = {
         'run' :         run,
-        'psdPath':      GenPath + 'data/PSD_data/%s' %(psdFile),
-        'obsTpath':     GenPath + 'data/PSD_data/%s' %(obsTfile),
-        'pofdPath':     GenPath + 'data/Run_%s/Events/Pofd_%s.p' %(run, desc),
-        'pofdMargPath': GenPath + 'data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
-        'pofdAvPath' :  GenPath + 'data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
+        'psdPath':      GenPath + 'Data/PSD_data/%s' %(psdFile),
+        'obsTpath':     GenPath + 'Data/PSD_data/%s' %(obsTfile),
+        'pofdPath':     GenPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, desc),
+        'pofdMargPath': GenPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
+        'pofdAvPath' :  GenPath + 'Data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
         }
     return d
 
