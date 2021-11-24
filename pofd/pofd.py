@@ -295,7 +295,7 @@ class Pofd(object):
                 plt.savefig(path, dpi=p.dpi)
                 plt.close('all')
 
-    def run(self, data=True, plots=False):
+    def run(self, data=True, plots=True):
         if data == True:
             self.generatePofD_DLRADec_events()
         if plots == True:
