@@ -1,6 +1,6 @@
 import pickle
 
-file = open("Pofd_GW150914",'rb')
+file = open("Pofd_GW150914.p",'rb')
 object_file = pickle.load(file)
 file.close()
 
