@@ -7,7 +7,7 @@ import os
 import errno
 import numpy as np
 
-GenPath = '/root/Home/BH-Iso/'
+GenPath = '/../../BH-Iso/'
 
 def addSecs(tm, secs):
 	fulldate = datetime.datetime(100, 1, 1, tm.hour, tm.minute, tm.second)
