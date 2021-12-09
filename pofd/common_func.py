@@ -35,7 +35,7 @@ def savePickle(obj, path):
 
 
 def dictEvent(name, run):
-	t = np.genfromtxt(GenPath + 'data/times/%s.txt'%(name))
+	t = np.genfromtxt(GenPath + 'Data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
