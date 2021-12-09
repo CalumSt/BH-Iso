@@ -64,7 +64,7 @@ eventsList = [cf.dictEvent('GW150914', 'O1'),
             ]
 
 eventsListGW170814 = [cf.dictEvent('GW170814', 'O2')]*10
-GenPath = '/../../BH-Iso/'
+GenPath = '/home/2311453s/BH-Iso/'
 samplesPath = GenPath + 'Data/Samples_%s.p'
 probPath = GenPath + 'Results/Sampling/Data/Prob_chain.p'
 acceptancePath = GenPath + 'Results/Sampling/Data/AcceptFrac_%s.p'
