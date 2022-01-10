@@ -11,6 +11,8 @@ from detections import Event, Run
 from setup import events_list, runs_list
 from model import Model
 
+GenPath = '/home/2311453s/BH-Iso/' ##change this to match directory of code
+
 class PixelPosterior(cpnest.model.Model):
     def __init__(self, model):
         self.model = model
@@ -62,7 +64,7 @@ def main():
     ns.run()
     ns.plot()
     posterior_samples = ns.get_posterior_samples(\
-                        filename=os.path.join(args.output, 'posterior.txt'))
+                        filename=GenPath+args.output+'posterior.dat')
 
 
 if __name__=='__main__':
