@@ -1,13 +1,16 @@
-import datetime
-import os
-import errno
 import pickle
 import joblib
-import os
+import datetime
 import errno
 import numpy as np
+import os
 
+"""Location of directory; this could be automated with OS"""
 GenPath = '/home/2311453s/BH-Iso/'
+"""Output directory, set equal to GenPath if you don't need the output to be sent elsewhere"""
+DataPath = '/scratch/wiay/2311453s/' # DataPath = GenPath
+
+
 
 def addSecs(tm, secs):
 	fulldate = datetime.datetime(100, 1, 1, tm.hour, tm.minute, tm.second)
@@ -35,27 +38,53 @@ def savePickle(obj, path):
 
 
 def dictEvent(name, run):
-	t = np.genfromtxt(GenPath + 'Data/times/%s.txt'%(name))
+	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
-		'postSamplePath' :  GenPath + 'Data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
-		'pofdPath':     GenPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
-		'pofdMargPath' : GenPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
-		'psdPath':      GenPath + 'Data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
+		'postSamplePath' :  DataPath + 'Data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
+		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
+		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
+		'psdPath':      DataPath + 'Data/Run_%s/Posterior_samples/GWTC1_%s_PSDs.dat.txt' %(run,name),
                 'time': t
 		}
 	return d
 
+def dictEventO3a(name, run):
+	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
+	d = {
+		'name' :            name,
+		'run' :             run,
+		'postSamplePath' :  DataPath + 'Data/GWTC-2/%s_posterior.h5' %(name),
+		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
+		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
+		'psdPath':      DataPath + 'Data/Run_%s/Posterior_samples/%s_PSDs.txt' %(run,name),
+                'time': t
+		}
+	return d
 
-def dictRun(run, psdFile, obsTfile, desc):
+def dictEventO3b(name, run):
+	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
+	d = {
+		'name' :            name,
+		'run' :             run,
+		'postSamplePath' :  DataPath + 'Data/GWTC-3/%s_posterior.h5' %(name),
+		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
+		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
+		'psdPath':      DataPath + 'Data/Run_%s/Posterior_samples/%s_PSDs.txt' %(run,name),
+                'time': t
+		}
+	return d
+
+def dictRun(run, psdFile,VpsdFile, obsTfile, desc):
     d = {
         'run' :         run,
-        'psdPath':      GenPath + 'Data/PSD_data/%s' %(psdFile),
-        'obsTpath':     GenPath + 'Data/PSD_data/%s' %(obsTfile),
-        'pofdPath':     GenPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, desc),
-        'pofdMargPath': GenPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
-        'pofdAvPath' :  GenPath + 'Data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
+        'psdPath':      DataPath + 'Data/PSD_data/%s' %(psdFile),
+        'VpsdPath':     DataPath + 'Data/PSD_data/%s' %(VpsdFile),
+        'obsTpath':     DataPath + 'Data/PSD_data/%s' %(obsTfile),
+        'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, desc),
+        'pofdMargPath': DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
+        'pofdAvPath' :  DataPath + 'Data/Run_%s/Events/Pofd_%s_average.p' %(run, desc),        
         }
     return d
 
@@ -63,5 +92,8 @@ def loadSamples(filename, table='IMRPhenomPv2_posterior'):
     import h5py
     print('Loading '+filename)
     f = h5py.File(filename, 'r')
-    return f[table]
+    try:
+        return f[table]
+    except KeyError:
+        return f['posterior']
 

@@ -4,6 +4,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathos.multiprocessing import ProcessingPool
+import pickle
+import joblib
 import datetime
 import lal
 import time
@@ -11,6 +13,9 @@ import scipy.interpolate
 import scipy.integrate
 import scipy.special
 import scipy.stats
+
+import os
+from pathlib import Path
 
 import setup as p
 import common_func as cf
@@ -47,14 +52,18 @@ class Pofd(object):
         lim = min(m1, (p.mmax-m1))
         return scipy.stats.uniform.rvs(loc=p.mmin, scale=(lim - p.mmin))
 
-    def setPSD(self, path, name, det):
+    def setPSD(self, path, name, det): ### needs editing to include virgo
         """
         Set up the PSD for LIGO Hanford and Livingston. Returns interpolated PSD and fmin
         Note: will want to include the Virgo PSD at a later date
         Optional: Plot the PSD if 'plot=True'
         """
         if det == 'L1H1':
-            PSDdata = np.genfromtxt(path)
+            PSDdata = np.genfromtxt(path) 
+            freq_samples = PSDdata[:, 0]
+            psd_data = PSDdata[:, 1]
+        elif det =='V1':
+            PSDdata = np.genfromtxt(path) 
             freq_samples = PSDdata[:, 0]
             psd_data = PSDdata[:, 1]
         else:
@@ -119,7 +128,7 @@ class Pofd(object):
 
         loopOut = pool.map(loopKiller, range(p.nNum))
         numFmax = np.array(loopOut)
-        return scipy.interpolate.interp1d(fmaxArr, numFmax)
+        return scipy.interpolate.interp1d(fmaxArr, numFmax, fill_value="extrapolate") 
 
     def __snrSquared(self, RA, Dec, inc, psi, m1, m2, detector, gmst, interpolNum):
         """The optimal SNR**2 for one detector, marginalising over sky
@@ -142,23 +151,45 @@ class Pofd(object):
         pool = ProcessingPool(p.pools)
         for item in p.runsList:
             interpolNum = self.__numFmax(item['psdPath'], item['run'], 'L1H1')
+            if item['run'] == 'O2': #or 'O3a':
+                interpolNum_V = self.__numFmax(item['VpsdPath'], item['run'], 'V1')
+
             print('Computing p(det|dist, RA, Dec) for run %s.' %(item['run']))
             print('Started at:', datetime.datetime.time(datetime.datetime.now()))
 
             def loopKiller(k):
                 rho = np.zeros((p.nSamp, 1))
+                test = np.zeros((p.nSamp, 1))
                 for n in range(p.nSamp):
+                    
                     rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                                self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum) \
                                                 + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                                 self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum)
+                                                                                               
+                    if item['run'] == 'O2': #or 'O3a':
+                        rho[n] = rho[n] + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                   self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V)
+
+                #print(test)   
                 d = (self.__d.reshape((p.dsize, 1))).transpose()
                 d = 1.0/(d*p.Mpc)**2
                 survival = np.matmul(rho, d)
                 survival = scipy.stats.ncx2.sf(p.snrThrComb**2, 4, survival)
                 return np.sum(survival,0)/p.nSamp
 
-            loopOut = pool.map(loopKiller, range(self.__nPix))
+            #loopOut = pool.map(loopKiller, range(self.__nPix)) # Optional multiprocessing; causing some conflict with dill
+            
+            loopOut = [loopKiller(i) for i in range(self.__nPix)]  ##if map is causing an issue here, this could be vectorised instead (or TensorFlow!)
+            
+            
+            """GenPath = '/home/2311453s/BH-Iso/pofd/'
+            output = 'debug/'
+            out_file ='V1SNR' + str(item['run']) + '.txt'
+            output_ = Path(output,sep ='\t')
+            output_.mkdir(parents=True, exist_ok=True)
+            np.savetxt(os.path.join(GenPath , output + out_file), test)"""
+            
             pofd_dLRADec = np.vstack(loopOut)
             cf.savePickle(pofd_dLRADec, item['pofdPath'])
             print('Actual end:', datetime.datetime.time(datetime.datetime.now()))
@@ -169,9 +200,29 @@ class Pofd(object):
         # Generate pofd(distance, sky pos) form the actual PSD for a run            
         # When generating pofd for events set gmst to the time of the event
         pool = ProcessingPool(p.pools)
-        for item in p.eventsList:
-            interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
-            interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+        for item in p.eventsList:    # unsure if nested try-except is the solution here
+            try:
+                interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
+                interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+                interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
+                check = 0
+            except ValueError:
+                try:
+                    interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
+                    interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+                    check = 1
+                except ValueError:
+                    try:
+                        interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
+                        interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+                        check = 2
+                    except ValueError:
+                        interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
+                        interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
+                        check = 3
+        
+                        
+
             data = cf.loadSamples(item['postSamplePath'])
             gpsTime = float(item['time'])
             gmst = lal.GreenwichMeanSiderealTime(gpsTime)
@@ -179,13 +230,48 @@ class Pofd(object):
             print('Computing p(det|dist, RA, Dec) for event %s.' %(item['name']))
             print('Started at:', datetime.datetime.time(datetime.datetime.now()))
 
+            if check == 0: ##This block can be deleted, just a test to see what was causing an error with Dill
+                print('Using all 3 detectors...')
+            elif check == 1:
+                print('Using only LIGO detectors...')
+            elif check == 2:
+                print('Using L1 and V1...')
+            elif check == 3:
+                print('Using H1 and V1...')
+                
+                
             def loopKiller(k):
                 rho = np.zeros((p.nSamp, 1))
+                test = np.zeros((p.nSamp, 1))
                 for n in range(p.nSamp):
+                    
+                    """rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
+                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1)""" 
+                    
+                if check == 0:
                     rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1)
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) \
+                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1) 
+                elif check == 1:
+                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
+                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) 
+                elif check == 2:
+                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) \
+                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1) 
+                elif check == 3:
+                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
+                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1)
 
                 d = (self.__d.reshape((p.dsize, 1))).transpose()
                 d = 1.0/(d*p.Mpc)**2
@@ -193,7 +279,8 @@ class Pofd(object):
                 survival = scipy.stats.ncx2.sf(p.snrThrComb**2, 4, survival)
                 return np.sum(survival,0)/p.nSamp
 
-            loopOut = pool.map(loopKiller, range(self.__nPix))
+            #loopOut = pool.map(loopKiller, range(self.__nPix))
+            loopOut = [loopKiller(i) for i in range(self.__nPix)] 
        	    pofd_dLRADec = np.vstack(loopOut)
             cf.savePickle(pofd_dLRADec, item['pofdPath'])
             print('Actual end:', datetime.datetime.time(datetime.datetime.now()))
@@ -201,6 +288,7 @@ class Pofd(object):
         pool.close()
         pool.join()
         pool.clear()
+        
         # TO DO: make a loop for each event, except add gmst to get different antenna responses
     def plotSamples(self):
         """
