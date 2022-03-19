@@ -10,8 +10,8 @@ path = os.path.dirname(__file__)
 folder = os.path.basename(path)
 parent = path.replace(folder,"") # parent directory
 """Output directory, set equal to parent if you don't need the output to be sent elsewhere"""
-# DataPath = parent
-DataPath = '/scratch/wiay/2311453s/'
+DataPath = parent
+# DataPath = '/scratch/wiay/2311453s/' # if you want to set it manually
 
 
 

@@ -49,8 +49,8 @@ path = os.path.dirname(__file__)
 folder = os.path.basename(path)
 parent = path.replace(folder,"") # parent directory
 """Location of data and output if you want it somewhere seperate"""
-# DataPath = parent
-DataPath = '/scratch/wiay/2311453s/'
+DataPath = parent
+# DataPath = '/scratch/wiay/2311453s/' # if you want to set it manually
 
 
 runsList = [cf.dictRun('O1', 'aligo_early.txt', 'advirgo_early.txt', 'Obs_time_O1.txt', 'early'),
