@@ -43,7 +43,7 @@ class Event(object):
             Minimum component mass
     """
     def __init__(self, name, run, time, samples_path, pofd_path,
-                 pdf_dist=None, dlmax=7500, nposts=10000, seed=12345,
+                 pdf_dist=None, dlmax=7500, nposts=500, seed=12345,
                  alpha=-2.35, min_mass=5):
         self._name = None
         self._run = None
@@ -68,8 +68,12 @@ class Event(object):
         self._pmass /= np.sum(self._pmass)
 
         # Precalculate the position vectors on the sky
-        theta = np.pi / 2 - self.post_samples['declination']
-        phi = self.post_samples['right_ascension']
+        try:
+            theta = np.pi / 2 - self.post_samples['declination']
+            phi = self.post_samples['right_ascension']
+        except ValueError:
+            theta = np.pi / 2 - self.post_samples['dec']
+            phi = self.post_samples['ra']
         self._sky_vectors = hp.ang2vec(theta, phi).T
         # Pixel centers of the pofd map
         self._nside = hp.npix2nside(self.pofd.size)
@@ -96,7 +100,7 @@ class Event(object):
     def run(self, run):
         if not isinstance(run, str):
             raise ValueError('provide a str for run')
-        elif not run in ['O1', 'O2']:
+        elif not run in ['O1', 'O2','O3a','O3b']:
             raise ValueError('invalid run identifier')
         self._run = run
 
@@ -123,6 +127,16 @@ class Event(object):
             post_samples = h5py.File(path, 'r')['IMRPhenomPv2_posterior']
         except OSError:
             raise OSError('provide a valid file')
+        except KeyError:
+            try:
+                post_samples = h5py.File(path, 'r')['IMRPhenomPv3HM_posterior']
+            except KeyError:
+                try:
+                    post_samples = h5py.File(path, 'r')['IMRPhenomXPHM_posterior']
+                except KeyError:
+                    print("Unknown waveform for posterior samples, check in file which was used")
+                    post_samples = h5py.File(path, 'r')['posterior']
+                    
         names = post_samples.dtype.names
         arr = np.zeros(self._nposts, dtype={'names': names,\
                        'formats': ['float64']*len(names)})
@@ -159,18 +173,24 @@ class Event(object):
 
     def pdf_dist(self, pdf_dist):
         if pdf_dist is None:
-            dist = self.post_samples['luminosity_distance_Mpc']
+            try:
+                dist = self.post_samples['luminosity_distance_Mpc']
+            except ValueError:
+                dist = self.post_samples['luminosity_distance'] # O3 h5 files have different formats to GWTC1
             return (3 / self.dlmax**3) * (dist**2)
         else:
             raise ValueError('not implemented')
 
     def _pdf_mass(self):
-        m1 = self.post_samples['m1_detector_frame_Msun']
+        try:
+            m1 = self.post_samples['m1_detector_frame_Msun']
+        except ValueError:
+            m1 = self.post_samples['mass_1_source'] # O3 h5 files have different formats to GWTC1
         return m1**(self._alpha) / (m1 - self.min_mass)
 
     def rotate_sky_samples(self, rotmat):
         """Rotates the position vectors on the sky
-        -----------------------
+        ---------------------
         Parameters:
             rotmat: np.array (3,3)
                 Rotation matrix

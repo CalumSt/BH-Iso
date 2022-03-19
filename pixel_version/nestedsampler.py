@@ -11,7 +11,11 @@ from detections import Event, Run
 from setup import events_list, runs_list
 from model import Model
 
-GenPath = '/home/2311453s/BH-Iso/' ##change this to match directory of code
+"""Location of directory"""
+path = os.path.dirname(__file__)
+folder = os.path.basename(path)
+parent = path.replace(folder,"") # parent directory
+# parent = '../BH-Iso/pixel_version'
 
 class PixelPosterior(cpnest.model.Model):
     def __init__(self, model):
@@ -41,7 +45,7 @@ def main():
                         help='10x GW170814 (default: False)')
     parser.add_argument('--mult', type=int, default=10,
                         help='Multiplicity of simulated GW170814')
-    parser.add_argument('--nthreads', type=int, default=8,
+    parser.add_argument('--nthreads', type=int, default=10,
                         help='Number of cores to request')
     parser.add_argument('--output',default='nested_sampling',
                         help='Output directory')
@@ -64,8 +68,7 @@ def main():
     ns.run()
     ns.plot()
     posterior_samples = ns.get_posterior_samples(\
-                        filename=GenPath+args.output+'posterior.dat')
-
-
+                        filename=Path + args.output + 'posterior.dat')
+    
 if __name__=='__main__':
     main()

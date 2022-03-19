@@ -1,7 +1,7 @@
 """Posterior model for detecting BBH signals isotropy"""
 import numpy as np
 from scipy.integrate import quad
-
+from scipy import special as sp
 import healpy as hp
 
 from transforms3d.euler import euler2mat
@@ -116,6 +116,7 @@ class Model(object):
         lp = self.logprior_rate(weights)
         if not np.isfinite(lp):
             return -np.infty
+        print(lp)
         return lp
 
     def loglikelihood(self, pars):
@@ -176,13 +177,15 @@ class NumericalIsotropicModel(object):
     analytically. Imports the likelihood functions from the anisotropic
     ``Model``.
     """
-    def __init__(self, events, runs, rate_bounds=(1e-5, 750)):
+    def __init__(self, events, runs, rate_bounds=(1e-5, 200)):
         self.aniso_model = Model(events=events, runs=runs, weights_nside=1,
                                  rate_bounds=rate_bounds, axes='rzyz')
 
     @staticmethod
-    def _log_prior(a0):
-        return -0.5 *  np.log(4 * np.pi * a0)
+    def _log_prior(a0): # a0 = R / 4 * pi 
+        log_prior = -0.5 *  np.log(4 * np.pi * a0)
+        #print("log_prior = {}".format(log_prior))
+        return log_prior
 
     def _log_likelihood(self, a0):
         pars = {'a{}'.format(i): a0 for i in range(12)}
@@ -190,21 +193,38 @@ class NumericalIsotropicModel(object):
         return self.aniso_model.loglikelihood(pars)
 
     def log_posterior(self, a0):
-        return self._log_prior(a0) + self._log_likelihood(a0)
+        log_post = self._log_prior(a0) + self._log_likelihood(a0)
+        #print("log posterior = {}".format(log_post))
+        return log_post
 
     def _posterior(self, a0):
         return np.exp(self.log_posterior(a0))
-
+    
     @property
     def log_evidence(self):
-        evidence, std = quad(self._posterior, 1e-5, 100, epsabs=1e-200,
-                             epsrel=1e-200)
-        return np.log(evidence)
+        rate_bounds = (1e-5,200)
+        N = 20000
+        # evidence, std = quad(self._posterior, 1e-5, 200, epsabs=1e-200, epsrel=1e-200)
+        # return np.log(evidence)
+        grid = np.linspace(rate_bounds[0], rate_bounds[1], N)
+        delta_a = (rate_bounds[1]-rate_bounds[0])/N
+        log_post = [self.log_posterior(i) for i in grid]
+        log_evidence = sp.logsumexp(log_post)
+        # correction for endpoints
+        correction = sp.logsumexp([self.log_posterior(grid[0]), \
+            self.log_posterior(grid[-1])])
+        log_evidence = sp.logsumexp([log_evidence], b=[1,-0.5])
+        # log_evidence = sp.logsumexp([log_evidence, endvals], b=[1,-0.5])
+        # correction for step size
+        log_evidence += np.log(delta_a)
+        return log_evidence,log_post
+
+        
 
     @property
     def maximum_logpost(self):
-        x = np.linspace(1e-5, 20, 1000)
+        x = np.linspace(1e-5, 200, 1000)
         y = [self.log_posterior(i) for i in x]
         x *= 4 * np.pi
-
+    
         return x, y, x[np.argmax(y)]
