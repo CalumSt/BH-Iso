@@ -5,10 +5,13 @@ import errno
 import numpy as np
 import os
 
-"""Location of directory; this could be automated with OS"""
-GenPath = '/home/2311453s/BH-Iso/'
-"""Output directory, set equal to GenPath if you don't need the output to be sent elsewhere"""
-DataPath = '/scratch/wiay/2311453s/' # DataPath = GenPath
+"""Location of directory"""
+path = os.path.dirname(__file__)
+folder = os.path.basename(path)
+parent = path.replace(folder,"") # parent directory
+"""Output directory, set equal to parent if you don't need the output to be sent elsewhere"""
+# DataPath = parent
+DataPath = '/scratch/wiay/2311453s/'
 
 
 
@@ -37,11 +40,12 @@ def savePickle(obj, path):
 	joblib.dump(obj, path, compress=True, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def dictEvent(name, run):
+def dictEvent(name, run,detectors):
 	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
+        'detectors':        detectors,
 		'postSamplePath' :  DataPath + 'Data/GWTC-1_sample_release/%s_GWTC-1.hdf5' %(name),
 		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
 		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
@@ -50,11 +54,12 @@ def dictEvent(name, run):
 		}
 	return d
 
-def dictEventO3a(name, run):
+def dictEventO3a(name, run, detectors):
 	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
+        'detectors':        detectors,
 		'postSamplePath' :  DataPath + 'Data/GWTC-2/%s_posterior.h5' %(name),
 		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
 		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
@@ -63,11 +68,12 @@ def dictEventO3a(name, run):
 		}
 	return d
 
-def dictEventO3b(name, run):
+def dictEventO3b(name, run,detectors):
 	t = np.genfromtxt(DataPath + 'Data/times/%s.txt'%(name))
 	d = {
 		'name' :            name,
 		'run' :             run,
+        'detectors':        detectors,
 		'postSamplePath' :  DataPath + 'Data/GWTC-3/%s_posterior.h5' %(name),
 		'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, name),
 		'pofdMargPath' : DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, name),
@@ -79,8 +85,8 @@ def dictEventO3b(name, run):
 def dictRun(run, psdFile,VpsdFile, obsTfile, desc):
     d = {
         'run' :         run,
-        'psdPath':      DataPath + 'Data/PSD_data/%s' %(psdFile),
-        'VpsdPath':     DataPath + 'Data/PSD_data/%s' %(VpsdFile),
+        'psdPath':      DataPath + 'Data/PSD_data/%s' %(psdFile), # LIGO PSD
+        'VpsdPath':     DataPath + 'Data/PSD_data/%s' %(VpsdFile), # Virgo PSD, included but redundant for O1
         'obsTpath':     DataPath + 'Data/PSD_data/%s' %(obsTfile),
         'pofdPath':     DataPath + 'Data/Run_%s/Events/Pofd_%s.p' %(run, desc),
         'pofdMargPath': DataPath + 'Data/Run_%s/Events/Pofd_%s_marg.p' %(run, desc),
@@ -95,5 +101,12 @@ def loadSamples(filename, table='IMRPhenomPv2_posterior'):
     try:
         return f[table]
     except KeyError:
-        return f['posterior']
+        try:
+            return f['IMRPhenomPv3HM_posterior']
+        except KeyError:
+            try:
+                return f['IMRPhenomXPHM_posterior']
+            except KeyError:
+                print('Unknown waveform type for posterior samples')
+                return f['posterior']
 

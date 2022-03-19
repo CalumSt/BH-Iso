@@ -17,6 +17,8 @@ import scipy.stats
 import os
 from pathlib import Path
 
+import sys
+
 import setup as p
 import common_func as cf
 
@@ -35,7 +37,7 @@ class Pofd(object):
         self.mtotMin = 2*p.mmin*p.mSolar
 
     def __massDist(self):
-        """ Minimum mass assumed to be 5 M_solar, total mass always less than 100 M_solar"""
+        """ Minimum mass assumed to be 5 M_solar, total mass always less than 100 M_solar. Note this is outdated with O3a data"""
         normConst = 1.0/(1-p.alpha)*(np.power(p.mmax-p.mmin, 1-p.alpha)-np.power(p.mmin, 1-p.alpha))
         rand = np.random.random_sample(p.nSamp)
         primary = self.__primaryM(rand, normConst)
@@ -120,6 +122,7 @@ class Pofd(object):
             return np.power(f,-7.0/3.0)/(PSD(f)**2)
         fmax = self.__fmax(self.mtotMin)
         fmaxArr = np.linspace(fmin, fmax, p.nNum)
+        
         pool = ProcessingPool(p.pools)
 
         def loopKiller(k):
@@ -128,8 +131,8 @@ class Pofd(object):
 
         loopOut = pool.map(loopKiller, range(p.nNum))
         numFmax = np.array(loopOut)
-        return scipy.interpolate.interp1d(fmaxArr, numFmax, fill_value="extrapolate") 
-
+        return scipy.interpolate.interp1d(fmaxArr, numFmax)                              
+        
     def __snrSquared(self, RA, Dec, inc, psi, m1, m2, detector, gmst, interpolNum):
         """The optimal SNR**2 for one detector, marginalising over sky
         location, inclination, polarisation, mass
@@ -150,8 +153,10 @@ class Pofd(object):
         gmst = 0
         pool = ProcessingPool(p.pools)
         for item in p.runsList:
-            interpolNum = self.__numFmax(item['psdPath'], item['run'], 'L1H1')
-            if item['run'] == 'O2': #or 'O3a':
+            if item['run'] == 'O1':
+                interpolNum = self.__numFmax(item['psdPath'], item['run'], 'L1H1')
+            else:
+                interpolNum = self.__numFmax(item['psdPath'], item['run'], 'L1H1')
                 interpolNum_V = self.__numFmax(item['VpsdPath'], item['run'], 'V1')
 
             print('Computing p(det|dist, RA, Dec) for run %s.' %(item['run']))
@@ -161,34 +166,28 @@ class Pofd(object):
                 rho = np.zeros((p.nSamp, 1))
                 test = np.zeros((p.nSamp, 1))
                 for n in range(p.nSamp):
-                    
-                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                    if item['run'] == 'O1':
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                                self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum) \
                                                 + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                                 self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum)
-                                                                                               
-                    if item['run'] == 'O2': #or 'O3a':
-                        rho[n] = rho[n] + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                   self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V)
+                    else:                                                                           
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                               self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum) \
+                                                + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                                self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum) \
+                                                + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                               self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V)
 
-                #print(test)   
                 d = (self.__d.reshape((p.dsize, 1))).transpose()
                 d = 1.0/(d*p.Mpc)**2
                 survival = np.matmul(rho, d)
                 survival = scipy.stats.ncx2.sf(p.snrThrComb**2, 4, survival)
                 return np.sum(survival,0)/p.nSamp
 
-            #loopOut = pool.map(loopKiller, range(self.__nPix)) # Optional multiprocessing; causing some conflict with dill
+            # loopOut = pool.map(loopKiller, range(self.__nPix)) # Optional multiprocessing; causing some conflict with dill
             
-            loopOut = [loopKiller(i) for i in range(self.__nPix)]  ##if map is causing an issue here, this could be vectorised instead (or TensorFlow!)
-            
-            
-            """GenPath = '/home/2311453s/BH-Iso/pofd/'
-            output = 'debug/'
-            out_file ='V1SNR' + str(item['run']) + '.txt'
-            output_ = Path(output,sep ='\t')
-            output_.mkdir(parents=True, exist_ok=True)
-            np.savetxt(os.path.join(GenPath , output + out_file), test)"""
+            loopOut = [loopKiller(i) for i in range(self.__nPix)]  
             
             pofd_dLRADec = np.vstack(loopOut)
             cf.savePickle(pofd_dLRADec, item['pofdPath'])
@@ -200,76 +199,54 @@ class Pofd(object):
         # Generate pofd(distance, sky pos) form the actual PSD for a run            
         # When generating pofd for events set gmst to the time of the event
         pool = ProcessingPool(p.pools)
-        for item in p.eventsList:    # unsure if nested try-except is the solution here
-            try:
+        for item in p.eventsList:  
+            if item['detectors'] == 'H1L1V1': 
                 interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
                 interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
                 interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
-                check = 0
-            except ValueError:
-                try:
-                    interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
-                    interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
-                    check = 1
-                except ValueError:
-                    try:
-                        interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
-                        interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
-                        check = 2
-                    except ValueError:
-                        interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
-                        interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
-                        check = 3
+            elif item['detectors'] == 'H1L1':
+                interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
+                interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+            elif item['detectors'] == 'H1V1':
+                interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
+                interpolNum_H1 = self.__numFmax(item['psdPath'], str('H1' + item['name']), 'H1_PSD')
+            elif item['detectors'] == 'L1V1':
+                interpolNum_V1 = self.__numFmax(item['psdPath'], str('V1' + item['name']), 'V1_PSD')
+                interpolNum_L1 = self.__numFmax(item['psdPath'], str('L1' + item['name']), 'L1_PSD')
+            else:
+                raise Exception("Detector config for %s is incorrect, check it's set correctly in the event list!"%(item['name']))
         
-                        
-
             data = cf.loadSamples(item['postSamplePath'])
             gpsTime = float(item['time'])
             gmst = lal.GreenwichMeanSiderealTime(gpsTime)
 
             print('Computing p(det|dist, RA, Dec) for event %s.' %(item['name']))
             print('Started at:', datetime.datetime.time(datetime.datetime.now()))
-
-            if check == 0: ##This block can be deleted, just a test to see what was causing an error with Dill
-                print('Using all 3 detectors...')
-            elif check == 1:
-                print('Using only LIGO detectors...')
-            elif check == 2:
-                print('Using L1 and V1...')
-            elif check == 3:
-                print('Using H1 and V1...')
-                
-                
+                                
             def loopKiller(k):
                 rho = np.zeros((p.nSamp, 1))
                 test = np.zeros((p.nSamp, 1))
-                for n in range(p.nSamp):
-                    
-                    """rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
-                                        + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1)""" 
-                    
-                if check == 0:
-                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                for n in range(p.nSamp):                    
+                    if item['detectors'] == 'H1V1L1':
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1) 
-                elif check == 1:
-                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                    elif item['detectors'] == 'H1L1':
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) 
-                elif check == 2:
-                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_H1) \
+                    elif item['detectors'] == 'H1V1':
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_H1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1) 
-                elif check == 3:
-                    rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
-                                        self.__psi[n], self.__m1[n], self.__m2[n], 'H1', gmst, interpolNum_L1) \
+                    elif item['detectors'] == 'L1V1':
+                        rho[n] = self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
+                                        self.__psi[n], self.__m1[n], self.__m2[n], 'L1', gmst, interpolNum_L1) \
                                         + self.__snrSquared(self.__ra[k], self.__dec[k], self.__inc[n], \
                                         self.__psi[n], self.__m1[n], self.__m2[n], 'V1', gmst, interpolNum_V1)
 
@@ -351,8 +328,11 @@ class Pofd(object):
             for i in pixPlot:
                 plt.plot(self.__d, survivalFunc(self.__d)[i,:])
             plt.xlabel('$d_L$ (Mpc)')
-            plt.ylabel('$p(D|d_L,I)$')
-            plt.xlim(xmin=0, xmax=2000)
+            plt.ylabel('$p(D|d_L,t = {0}, I)$'.format(item['run']))
+            if item['run'] == 'O3b':
+                plt.xlim(xmin=0, xmax=4000)
+            else:
+                plt.xlim(xmin=0, xmax=2000)
 
             path = p.survivalPath %(item['run'])
             plt.tight_layout()
@@ -379,11 +359,11 @@ class Pofd(object):
                 plt.figure()
                 hpxmap = np.zeros(self.__nPix, dtype=np.float)
                 hpxmap[self.__pixArr] = self.__survivalMap(d, self.__ra, self.__dec, gmstrad, item['pofdPath'])[self.__pixArr]
-                hp.mollview(hpxmap, title=desc, unit=unit)
+                hp.mollview(hpxmap, unit=unit, min = 0, max = round(max(hpxmap),6))
                 plt.savefig(path, dpi=p.dpi)
                 plt.close('all')
 
-    def run(self, data=True, plots=True):
+    def run(self, data=False, plots=True):
         if data == True:
             self.generatePofD_DLRADec_events()
         if plots == True:

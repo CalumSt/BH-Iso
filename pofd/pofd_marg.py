@@ -25,16 +25,28 @@ class PofdMarg:
     def loadEvents(self):
         self.eventsList = []
         for item in p.eventsList:
-            s = cf.loadSamples(item['postSamplePath'])
-            dictData = {'run': item['run'],
+            try:
+                s = cf.loadSamples(item['postSamplePath'])
+                dictData = {'run': item['run'],
                         'name': item['name'],
                         'right_ascension': s['right_ascension'],
                         'declination': s['declination'],
                         'time0': item['time'],
                         'pofdMarg': cf.openPickle(item['pofdMargPath']),
                         'pofd': cf.openPickle(item['pofdPath']),}
-            self.eventsList.append(dictData)
-
+                self.eventsList.append(dictData)
+            except ValueError: # in case the data uses 'ra' and 'dec' instead
+                s = cf.loadSamples(item['postSamplePath'])
+                dictData = {'run': item['run'],
+                        'name': item['name'],
+                        'right_ascension': s['ra'],
+                        'declination': s['dec'],
+                        'time0': item['time'],
+                        'pofdMarg': cf.openPickle(item['pofdMargPath']),
+                        'pofd': cf.openPickle(item['pofdPath']),}
+                self.eventsList.append(dictData)
+                
+                
     def loadRuns(self):
         self.runsList = []
         for item in p.runsList:
@@ -160,18 +172,26 @@ class PofdMarg:
         figwidth=3.4 # PRD column width in inches
         aspect = 0.75 # Aspect ratio
         figheight = aspect*figwidth
+        unit = 'Probability of detection'
 
         plt.figure(figsize=(figwidth,figheight),dpi=150)
-        hp.mollview(hpMap, title='')
+        hp.mollview(hpMap, title='',unit = unit,min = 0, max = round(max(hpMap),5))
 
+        markers = ["o","v","^","<",">","s","*","D","H","8","P","X"]
+        
         for event in events:
+            
             rai, thetai = event['right_ascension'],event['declination']
             phi, theta = rai, np.pi/2 - thetai
             if len(events) == 1:
-                hp.projscatter(theta, phi, s=0.05, color='red',label=event['name'])
+                hp.projscatter(theta, phi, s=0.05, color='red',label=event['name'],marker = "o")
             else:
-                hp.projscatter(theta, phi, s=0.05,label=event['name'])
-        plt.legend()
+                idx = events.index(event)
+                hp.projscatter(theta, phi, s=5,label=event['name'], marker = markers[idx])
+        if len(events) == 1:
+            pass
+        else:
+            plt.legend(markerscale = 2, loc = 3)
         plt.savefig(path, dpi=150)
         plt.close('all')
 
@@ -181,6 +201,7 @@ class PofdMarg:
             self.__pdfDetRotation()
 
         if plots == True:
+        
             print('Plotting..')
             self.loadRuns()
             self.loadEvents()
@@ -189,7 +210,14 @@ class PofdMarg:
                 path = p.mapPath %(run['run'])
                 obj = run['pofdMean']
                 hpMap = obj[self.__pixArr]
-                self.plotMap(hpMap=hpMap, path=path, events=[e for e in self.eventsList if e['run']==run['run']])
+                self.plotMap(hpMap=hpMap, path = path, events = [])
+                events=[e for e in self.eventsList if e['run']==run['run']]
+                if len(events) > 7:
+                    events = events[0::5] # samples every 6 events to plot. Could expand to plot each seperately.
+                    self.plotMap(hpMap=hpMap, path=path + '_events', events=events)
+                else:
+                    self.plotMap(hpMap=hpMap, path=path + '_events', events=events)
+                
             for event in self.eventsList:
                 print('Plotting '+event['name'])
                 path = p.mapPath %(event['name'])
@@ -199,7 +227,7 @@ class PofdMarg:
 
 def main():
     prob = PofdMarg()
-    prob.run(data=True, plots=True)
+    prob.run(data=False, plots=True)
 
 if __name__=='__main__':
     main()
