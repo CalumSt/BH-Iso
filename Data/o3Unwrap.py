@@ -22,14 +22,17 @@ def loadSamples(name,f0 = 16, table1='C01:IMRPhenomPv2',table2 = 'posterior_samp
         output = 'O3bEvents/'
     print('Loading '+filename)
     e = "/C01:IMRPhenomPv2/" in h5py.File(filename, 'r')
+    posterior_waveform = 'IMRPhenomPv2'
     if e == False:
         e = "/C01:IMRPhenomPv3HM/" in h5py.File(filename, 'r')
         if e == True:
-            print("IMRPhenomPv2 not found, using IMRPhenomPv3HM instead...")
+            print("Using IMRPhenomPv3HM ...")
             table1='C01:IMRPhenomPv3HM'
+            posterior_waveform = 'IMRPhenomPv3HM'
         if e == False:
             print("Using IMRPhenomXPHM...")
             table1 = 'C01:IMRPhenomXPHM'
+            posterior_waveform = 'IMRPhenomXPHM'
     
     fullData = f[table1]
     post = np.array(fullData[table2])
@@ -83,7 +86,7 @@ def loadSamples(name,f0 = 16, table1='C01:IMRPhenomPv2',table2 = 'posterior_samp
     df.to_csv(PSD_dir / PSD_file,index=False,sep ='\t')
     
     with h5py.File(post_dir / post_file, 'w') as h:
-        dset = h.create_dataset('IMRPhenomPv2_posterior', data = post)
+        dset = h.create_dataset(posterior_waveform + '_posterior', data = post)
     
     print("Posterior and PSD file generated for " + name)
     
