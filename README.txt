@@ -1,5 +1,5 @@
 This is a quick document detailing how to use the nestedsampler script for analysing isotropy of BBH mergers. If you have difficulties with 
-specific issues, or believe a file is missing, feel free to email me at cs_islay667@protonmail.com.
+specific issues, or believe a file is missing, feel free to email me at calum.stuart@protonmail.com.
 
 1. First, you need data. You can grab the GWTC-1, GWTC-2, and GWTC-3 data from:
 
